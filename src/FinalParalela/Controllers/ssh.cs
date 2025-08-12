@@ -1,81 +1,69 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using FinalParalela.Models;
-//using Renci.SshNet;
+﻿using FinalParalela.Models;
+using Microsoft.AspNetCore.Mvc;
+using Renci.SshNet;
 using System.IO;
 
-
-//declaramos el namespace al que pertenece el controlador
 namespace FinalParalela.Controllers;
 
-// Definimos un controlador para manejar las peticiones SSH
 [ApiController]
 [Route("api/ssh")]
 public class SshController : ControllerBase
 {
-    //Definimos un endpoint para ejecutar comandos SSH y hacer la autenticacio
     [HttpPost("run")]
-    public IActionResult Run([FromBody] SSHConnectionDto dto) //dto es el objeto que contiene los datos de la conexion, estos los recoge del Body de la peticion
+    public IActionResult Run([FromBody] SSHConnectionDto dto) //parametros que esperamos en el body
     {
-        // Comando que vamos a ejecutar en el servidor
-        var cmdText = $"powershell -NoProfile -Command Get-EventLog -LogName System |Select-Object TimeGenerated, EntryType, Source, EventID, Message |Export-Csv -Path 'system_log.csv' -NoTypeInformation -Encoding UTF8";
+        //Generamos el csv en el usuario que se haya accedido remotamente
+        var cmdText =
+            "powershell -NoProfile -Command " +
+            "\"$csv = Join-Path $env:USERPROFILE 'system_log.csv'; " +
+            "Get-WinEvent -LogName System | " +
+            "Select-Object TimeCreated, LevelDisplayName, ProviderName, Id, Message | " +
+            "Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8\"";
 
-        // Esto será algo como: C:\Users\pepito
-        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-        string rutaCSV = Path.Combine(userProfile, "archivo.csv");
-
-        //Obteniendo ruta relativa del proyecto
+        // Obtenemos la ruta relativa del proyecto para posteriormente guardar los logs: ./data/system_log.csv
         string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
-        
-        // Crea una carpeta data dentro del proyecto
         string localDir = Path.Combine(projectRoot, "data");
+        Directory.CreateDirectory(localDir);//
+        string localPath = Path.Combine(localDir, "system_log.csv");
 
-        string usuarioActual = Environment.UserName;
-
-        Directory.CreateDirectory(localDir);
-
-        string localPath = Path.Combine(localDir, "archivo.csv");
-        //podemos colocar el comando de get event de una vez
-
-        // Creamos el objeto de conexion con los datos del DTO, este objeto es el que espera Renci.SshNet.SshClient para crear la conexion
-        var info = new Renci.SshNet.PasswordConnectionInfo(dto.Host, dto.Port, dto.User, dto.Password)
+        // creamos el objeto de conexion SSH
+        var info = new PasswordConnectionInfo(dto.Host, dto.Port, dto.User, dto.Password)
         {
-            //hacemos un timeout para no tumbar la peticion actual, en el caso de que esto duarara mas de 30 segundos
             Timeout = TimeSpan.FromSeconds(30)
         };
 
-        //creamos el cliente ssh para conectarnos al servidor
-        using var client = new Renci.SshNet.SshClient(info);
-        // configuramos un intervalo de 15 para mantener la conexion activa
+        //creamos el cliente ssh para hacer la conexion con la informacion obtenida
+        using var client = new SshClient(info);
+        //mantenemos la conexion activa para evitar que nos de un timeout y se cierre
         client.KeepAliveInterval = TimeSpan.FromSeconds(15);
-        // nos conectamos al servidor ssh
+        //nos conectamos al ciente creado con la informacion
         client.Connect();
 
-        //ejecutamos el comando en el servidor directamente
+        //ejecutamos el comando 
         var cmd = client.RunCommand(cmdText);
 
-        var scp = client.RunCommand($"scp {usuarioActual}@localhost:\"{localDir}\" ./\r\n");
-        
-        //obtenemos el resultado del comando que se ejecuto
-                var result = new
+
+
+        //  Obtenemos la ruta al acceder por ssh, para construir la ruta SFTP 
+        var remoteUserProfile = client.RunCommand("powershell -NoProfile -Command \"$env:USERPROFILE\"")
+                                      .Result.Trim();
+        client.Disconnect(); //cerramos la sesion
+
+
+        //Ruta remota en formato valido para SFTP en Windows OpenSSH
+        var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
+        if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
+            remotePath = "/" + remotePath; // esto devuelve => /C:/Users/usuario/system_log.csv
+
+        // descargamos el archivo por sftp
+        using (var sftp = new SftpClient(info)) //pasamos la informacion del cliente
         {
-            exitStatus = cmd.ExitStatus ?? -1,        // -1 si el server no devolvió código
-            stdout = cmd.Result ?? string.Empty,
-            stderr = cmd.Error ?? string.Empty
-        };
-        //cerramos la conexion al servidor 
-        client.Disconnect();
+            sftp.Connect();//nos conectamos 
+            using var fs = System.IO.File.Create(localPath); //creamos el archivo
+            sftp.DownloadFile(remotePath, fs);//comenzamos la descarga, pasandole la instancia del IO del archivo
+            sftp.Disconnect(); //nos desconectamos
+        }
 
-
-        // Crear servidor FTP o SFTP para guardar el LOG en el proyecto o usar directamente scp
-
-
-        // Abrir el archivo con la ruta relativa del LOG generado dentro del proyecto
-
-        // Hacer analisis paralelo/secuencial de los logs generados del servidor
-
-       
-        //retoramos el resultado de la respuesta
-        return Ok(result);
+        return Ok();
     }
 }

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Renci.SshNet;
 using System.IO;
-
+using FinalParalela.Services;
 namespace FinalParalela.Controllers;
 
 [ApiController]
@@ -64,6 +64,11 @@ public class SshController : ControllerBase
             sftp.Disconnect(); //nos desconectamos
         }
 
+        // Sanitizamos los logs
+        var logsResult = LogsService.SanitizeLogs(localDir);
+
+
+        //analisi paralelo
         return Ok();
     }
 }

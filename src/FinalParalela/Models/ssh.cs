@@ -13,5 +13,4 @@ public class SSHConnectionDto
     public string Password { get; set; } = default!;
     //Comando a ejecutar en el servidor, por defecto, haremos un dir 
     // TO DO: Validar si sera necesario o solo utilizaremos el comando por defecto de obtener los logs del systema
-    public string Command { get; set; } = "dir";
 }

@@ -5,6 +5,20 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+// Add services to the container.
+builder.Services.AddCors(options =>
+{
+    // creamos una politica que permita cualquier origen
+    options.AddPolicy(name: "AllowAnyOriginPolicy",
+                      policy =>
+                      {
+                          policy.AllowAnyOrigin() //permitimos cualquier host
+                                .AllowAnyHeader() //permitimos cualquier header
+                                .AllowAnyMethod(); //permitimos cualquier metodo, a pesar de solo utilizar el POST
+                      });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -15,6 +29,8 @@ if (app.Environment.IsDevelopment())
     //inicializamos la UI de swagger
     app.UseSwaggerUI();
 }
+
+app.UseCors("AllowAnyOriginPolicy"); // utilizamos la politica del cors que generamos
 
 //Para redireccion de http a https
 app.UseHttpsRedirection();

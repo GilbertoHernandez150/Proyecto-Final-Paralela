@@ -34,6 +34,7 @@ public class SshController : ControllerBase
         };
 
         // Conexión SSH para ejecutar el comando
+        
         using var client = new SshClient(info);
         client.KeepAliveInterval = TimeSpan.FromSeconds(15);
         client.Connect();
@@ -49,12 +50,12 @@ public class SshController : ControllerBase
         if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
             remotePath = "/" + remotePath;
 
-        // Descarga del archivo vía SFTP
+        //Descarga del archivo vía SFTP
         using (var sftp = new SftpClient(info))
         {
             sftp.Connect();
-            //using var fs = System.IO.File.Create(localPath);
-            //sftp.DownloadFile(remotePath, fs);
+            using var fs = System.IO.File.Create(localPath);
+            sftp.DownloadFile(remotePath, fs);
             sftp.Disconnect();
         }
 

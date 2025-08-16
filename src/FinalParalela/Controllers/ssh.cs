@@ -53,18 +53,16 @@ public class SshController : ControllerBase
         using (var sftp = new SftpClient(info))
         {
             sftp.Connect();
-            using var fs = System.IO.File.Create(localPath);
-            sftp.DownloadFile(remotePath, fs);
+            //using var fs = System.IO.File.Create(localPath);
+            //sftp.DownloadFile(remotePath, fs);
             sftp.Disconnect();
         }
 
-        // Sanitización de logs
-        var logsResult = LogsService.SanitizeLogs(localPath);
+        // sanitizamos los logs para pasarlo a el analisis paralelo
+        var analisis = LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
 
-        // Análisis paralelo aplicando descomposición de datos
-        var analisis = LogsService.AnalizarLogsParalelo(logsResult);
 
-        // Retornar resultados
+        // retornamos los resultados
         return Ok(new
         {
             Mensaje = "Análisis paralelo completado con éxito.",

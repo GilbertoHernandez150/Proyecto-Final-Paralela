@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 
@@ -24,123 +25,134 @@ namespace FinalParalela.Services
         }
 
         // Metodo estatico que lee un archivo CSV de logs y los clasifica
-        public static LogsResult SanitizeLogs(string path)
-        {
-            string filePath = path;
+        public static ParallelAnalysisResult ProcesarLogsSecuencialVsParalelo(string path)
+        { 
+            //Ver si el archivo existe en la ruta recibida
+            if (!File.Exists(path))
+                //retornamos el objeto vacio
+                return new ParallelAnalysisResult();
 
-            // Verifica si el archivo existe; si no, retorna un resultado vacio
-            if (!System.IO.File.Exists(filePath))
-                return new LogsResult { Errors = new(), Warnings = new(), Infos = new() };
+            // Iniciamos la ejecucion secuencial
+            var swSec = Stopwatch.StartNew();
 
-            var logs = new List<LogEntry>();
+            // Creamos listas para cada tipo de log, haciendo instancia de LogEntry para la representacion
+            var secErrors = new List<LogEntry>();
+            var secWarnings = new List<LogEntry>();
+            var secInfos = new List<LogEntry>();
 
-            // Abre el archivo para lectura
-            using (var reader = new StreamReader(filePath))
+            //iteramos de manera secuencial sobre cada linea del archivo csv
+            foreach (var linea in File.ReadLines(path).Skip(1)) 
             {
-                // Salta la primera linea
-                reader.ReadLine();
+                //separamos cada linea por comas
+                var parts = linea.Split(',');
 
-                // Procesa linea por linea
-                while (!reader.EndOfStream)
+                // validamos si la linea tiene 3 partes
+                if (parts.Length >= 3)
                 {
-                    var line = reader.ReadLine();
-                    var parts = line.Split(',');
+                    // intentamos convertir la fecha con el formato esperado
+                    DateTime fecha;
+                    if (!DateTime.TryParseExact(parts[0].Trim('"'),
+                            "M/d/yyyy h:mm:ss tt",
+                            CultureInfo.InvariantCulture,
+                            DateTimeStyles.None,
+                            out fecha))
+                        fecha = DateTime.MinValue;
 
-                    if (parts.Length >= 3)
-                    {
-                        if (!DateTime.TryParseExact(
-                                parts[0].Trim('"'),
-                                "M/d/yyyy h:mm:ss tt",
-                                CultureInfo.InvariantCulture,
-                                DateTimeStyles.None,
-                                out var fecha))
-                        {
-                            fecha = DateTime.MinValue;
-                        }
+                    //almacenamos el tipo correspondiente en cada variable, le quitamos las comillas para evitar que salga '"MENSAJE"'
+                    var tipo = parts[1].Trim('"').ToUpper();
+                    var mensaje = parts[2].Trim('"');
+                    var entry = new LogEntry { Fecha = fecha, Tipo = tipo, Mensaje = mensaje };
 
-                        logs.Add(new LogEntry
-                        {
-                            Fecha = fecha,
-                            Tipo = parts[1].Trim('"').ToUpper(),
-                            Mensaje = parts[2].Trim('"')
-                        });
-                    }
+                    //segun el tipo del log, lo agregamo a la lista de errores correspondientes de manera secuencial
+                    if (tipo.Contains("ERROR")) secErrors.Add(entry);
+                    else if (tipo.Contains("WARNING")) secWarnings.Add(entry);
+                    else if (tipo.Contains("INFO")) secInfos.Add(entry);
                 }
             }
 
-            // Clasifica y ordena por fecha descendente
-            return new LogsResult
-            {
-                Errors = logs.Where(l => l.Tipo.Contains("ERROR"))
-                             .OrderByDescending(l => l.Fecha)
-                             .ToList(),
-                Warnings = logs.Where(l => l.Tipo.Contains("WARNING"))
-                               .OrderByDescending(l => l.Fecha)
-                               .ToList(),
-                Infos = logs.Where(l => l.Tipo.Contains("INFO"))
-                            .OrderByDescending(l => l.Fecha)
-                            .ToList()
-            };
-        }
+            //asignamos la cantidad de errores a las variables para el secuencial
+            int erroresSec = secErrors.Count;
+            int warningsSec = secWarnings.Count;
+            int infosSec = secInfos.Count;
 
-        // Clase para almacenar el resultado del analisis paralelo
-        public class ParallelAnalysisResult
-        {
-            public int TotalErrors { get; set; }
-            public int TotalWarnings { get; set; }
-            public int TotalInfos { get; set; }
-            public double Speedup { get; set; }
-            public double Eficiencia { get; set; }
-            public long TiempoSecuencialMs { get; set; }
-            public long TiempoParaleloMs { get; set; }
-        }
+            //detenemos el tiempo para calcular la ejecucion secuencial
 
-        // Metodo para realizar el analisis paralelo y secuencial
-        public static ParallelAnalysisResult AnalizarLogsParalelo(LogsResult logs)
-        {
-            // Ejecución secuencial
-            var swSec = Stopwatch.StartNew();
-            int erroresSec = logs.Errors.Count;
-            int warningsSec = logs.Warnings.Count;
-            int infosSec = logs.Infos.Count;
             swSec.Stop();
 
-            // Ejecucion paralela
+            // iniciamos la ejecucion paralela
             var swPar = Stopwatch.StartNew();
-            int erroresPar = 0, warningsPar = 0, infosPar = 0;
-            object locker = new object();
+            //creamos la listas para guardar los resultados despues de la ejecucion paralela
+            var parErrors = new List<LogEntry>();
+            var parWarnings = new List<LogEntry>();
+            var parInfos = new List<LogEntry>();
 
-            var todasLasEntradas = new List<LogEntry>();
-            todasLasEntradas.AddRange(logs.Errors);
-            todasLasEntradas.AddRange(logs.Warnings);
-            todasLasEntradas.AddRange(logs.Infos);
+            //creamos los objetos de bloque para que se procese luego de manera paralela
 
+            object lockErrors = new object();
+            object lockWarnings = new object();
+            object lockInfos = new object();
+
+            //leenmos las lineas del archivo
+            var lineas = File.ReadAllLines(path).Skip(1).ToArray();
+            //iteramos de manera paralela sobre cada linea del archivo 
             Parallel.ForEach(
-                todasLasEntradas,
-                () => (errores: 0, warnings: 0, infos: 0),
-                (log, state, local) =>
+                Partitioner.Create(0, lineas.Length), //dividimos el trabajo en particiones oara procesarlo en paralelo
+                range =>
                 {
-                    if (log.Tipo.Contains("ERROR")) local.errores++;
-                    else if (log.Tipo.Contains("WARNING")) local.warnings++;
-                    else if (log.Tipo.Contains("INFO")) local.infos++;
-                    return local;
-                },
-                localFinal =>
-                {
-                    lock (locker)
-                    {
-                        erroresPar += localFinal.errores;
-                        warningsPar += localFinal.warnings;
-                        infosPar += localFinal.infos;
-                    }
-                });
+                    //creamos listas locales para los tipos de logs
+                    var localErrors = new List<LogEntry>();
+                    var localWarnings = new List<LogEntry>();
+                    var localInfos = new List<LogEntry>();
 
+                    //iteramos sobre el rango obtenido
+                    for (int i = range.Item1; i < range.Item2; i++)
+                    {
+                        //dividmos cada linea para obtener cada uno de los valores del row del csv
+                        var parts = lineas[i].Split(',');
+
+                        //verificamos si la tiene al menos las 3 partes del log requerido
+                        if (parts.Length >= 3)
+                        {
+                            //parseamos la fecha con el formato esperado 
+                            DateTime fecha;
+                            if (!DateTime.TryParseExact(parts[0].Trim('"'),
+                                    "M/d/yyyy h:mm:ss tt",
+                                    CultureInfo.InvariantCulture,
+                                    DateTimeStyles.None,
+                                    out fecha))
+                                fecha = DateTime.MinValue;
+
+                            //almacenamos el tipo de valor correspondiente en cada variable y le quitamos las commillas
+                            var tipo = parts[1].Trim('"').ToUpper();
+                            var mensaje = parts[2].Trim('"');
+                            var entry = new LogEntry { Fecha = fecha, Tipo = tipo, Mensaje = mensaje };
+
+                            //segun el tipo del log, lo agregamos a la lista de errores correspondientes de manera paralela
+                            if (tipo.Contains("ERROR")) localErrors.Add(entry);
+                            else if (tipo.Contains("WARNING")) localWarnings.Add(entry);
+                            else if (tipo.Contains("INFO")) localInfos.Add(entry);
+                        }
+                    }
+
+                    // hacemos un lock para agregar los resultados de manera segura dentro de la ejecucion para evitar race condition en los datos
+                    lock (lockErrors) parErrors.AddRange(localErrors);
+                    lock (lockWarnings) parWarnings.AddRange(localWarnings);
+                    lock (lockInfos) parInfos.AddRange(localInfos);
+                });
+            
+            // asginamos la cantidad de errores a las variables para el paralelo
+            int erroresPar = parErrors.Count;
+            int warningsPar = parWarnings.Count;
+            int infosPar = parInfos.Count;
+
+            //finalizamos el tiempo para la ejecucion paralela
             swPar.Stop();
 
-            // Metricas
-            double speedup = (double)swSec.ElapsedMilliseconds / swPar.ElapsedMilliseconds;
-            double eficiencia = speedup / Environment.ProcessorCount;
+            // medimos el speedp y eficiencia, usamos el ternario para evitar divisiones entre cero
+            double speedup = swPar.ElapsedMilliseconds > 0 ? (double)swSec.ElapsedMilliseconds / swPar.ElapsedMilliseconds: 0;
+            double eficiencia = Environment.ProcessorCount > 0 ? speedup / Environment.ProcessorCount: 0;
 
+            //retornamos el objeto del analisis paralelo realizado
             return new ParallelAnalysisResult
             {
                 TotalErrors = erroresPar,
@@ -152,5 +164,20 @@ namespace FinalParalela.Services
                 TiempoParaleloMs = swPar.ElapsedMilliseconds
             };
         }
+
     }
+    // Clase para almacenar el resultado del analisis paralelo
+    public class ParallelAnalysisResult
+        {
+            public int TotalErrors { get; set; }
+            public int TotalWarnings { get; set; }
+            public int TotalInfos { get; set; }
+            public double Speedup { get; set; }
+            public double Eficiencia { get; set; }
+            public long TiempoSecuencialMs { get; set; }
+            public long TiempoParaleloMs { get; set; }
+        };
+
+        
+    
 }

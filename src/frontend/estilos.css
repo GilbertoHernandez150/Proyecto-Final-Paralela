@@ -30,7 +30,10 @@ body {
     color: var(--text);
     line-height: 1.5;
 }
-
+#timeChart {
+  max-width: 300px;
+  max-height: 300px;
+}
 /* ---------- Layout ---------- */
 .container {
     max-width: 1100px;

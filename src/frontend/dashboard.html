@@ -4,13 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard de Análisis Paralelo</title>
-    <link rel="stylesheet" href="estilos.css">
+    <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="styles/loading.css">
+
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="dashboard" style="display: none;">
         <div class="header">
             <h1>Dashboard de Análisis Paralelo</h1>
-            <p>Resultados del procesamiento de datos en tiempo real</p>
+            <p>Resultados del analisis de logs por SSH</p>
+            <p id="ssh-info"></p>
         </div>
 
         <div class="status-message status-success">
@@ -75,6 +78,15 @@
         </div>
     </div>
 
+    <!--Loading que vamos a mostrar-->
+    
+    <div id="loadingOverlay" class="loading-overlay" aria-live="polite" aria-busy="true" hidden>
+    <div class="loader-wrap">
+        <div class="neon-ring" aria-hidden="true"></div>
+        <span class="loading-center-text">Cargando<br>información...</span>
+    </div>
+    </div>
+    </div>
     <!-- Chart.js ( para las gráficas) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/dashboard.js"></script>

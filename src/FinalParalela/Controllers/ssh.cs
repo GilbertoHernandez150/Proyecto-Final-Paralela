@@ -1,8 +1,10 @@
 ﻿using FinalParalela.Models;
-using Microsoft.AspNetCore.Mvc;
-using Renci.SshNet;
-using System.IO;
 using FinalParalela.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
+using Renci.SshNet;
+using Renci.SshNet.Common;
+using System.IO;
 
 namespace FinalParalela.Controllers;
 
@@ -35,39 +37,69 @@ public class SshController : ControllerBase
 
         // Conexión SSH para ejecutar el comando
         
-        using var client = new SshClient(info);
-        client.KeepAliveInterval = TimeSpan.FromSeconds(15);
-        client.Connect();
-        client.RunCommand(cmdText);
+        //using var client = new SshClient(info);
+        //client.KeepAliveInterval = TimeSpan.FromSeconds(15);
+        //client.Connect();
+        //client.RunCommand(cmdText);
 
-        // Obtener ruta remota del archivo generado
-        var remoteUserProfile = client.RunCommand("powershell -NoProfile -Command \"$env:USERPROFILE\"")
-                                      .Result.Trim();
-        client.Disconnect();
-
-        // Ajustar formato de ruta para SFTP
-        var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
-        if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
-            remotePath = "/" + remotePath;
-
-        //Descarga del archivo vía SFTP
-        using (var sftp = new SftpClient(info))
+        try
         {
-            sftp.Connect();
-            using var fs = System.IO.File.Create(localPath);
-            sftp.DownloadFile(remotePath, fs);
-            sftp.Disconnect();
+            using var client = new SshClient(info);
+            client.KeepAliveInterval = TimeSpan.FromSeconds(15);
+            client.Connect();
+
+            if (!client.IsConnected)
+                throw new Exception("No se pudo establecer la conexión al servidor.");
+
+            var result = client.RunCommand(cmdText);
+            // Obtener ruta remota del archivo generado
+            var remoteUserProfile = client.RunCommand("powershell -NoProfile -Command \"$env:USERPROFILE\"")
+                                          .Result.Trim();
+            client.Disconnect();
+
+            // Ajustar formato de ruta para SFTP
+            var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
+            if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
+                remotePath = "/" + remotePath;
+
+            //Descarga del archivo vía SFTP
+            using (var sftp = new SftpClient(info))
+            {
+                sftp.Connect();
+                using var fs = System.IO.File.Create(localPath);
+                sftp.DownloadFile(remotePath, fs);
+                sftp.Disconnect();
+            }
+
+            // sanitizamos los logs para pasarlo a el analisis paralelo
+            var analisis = LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
+
+
+            // retornamos los resultados
+            return Ok(new
+            {
+                Mensaje = "Análisis paralelo completado con éxito.",
+                Resultado = analisis
+            });
+        }
+        catch (SshAuthenticationException authEx)
+        {
+            // manejo de error al momento de autenticar, esto puede ser por credenciales incorrectas
+            return BadRequest($"Error de autenticación: {authEx.Message}");
+        }
+        catch (SshConnectionException connEx)
+        {
+            // problemas al conectar, puede ser xq no reconozca el host, puerto incorrecto etc etc
+            return BadRequest($"Error de conexion SSH: {connEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            // manejamos cualquier otra excepcion inesperada
+            return  BadRequest($"Error inesperado: {ex.Message}");
         }
 
-        // sanitizamos los logs para pasarlo a el analisis paralelo
-        var analisis = LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
+        
 
-
-        // retornamos los resultados
-        return Ok(new
-        {
-            Mensaje = "Análisis paralelo completado con éxito.",
-            Resultado = analisis
-        });
+       
     }
 }

@@ -20,23 +20,23 @@
         <div class="dashboard active">
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-value errors">4,884</div>
-                    <div class="metric-label">Total Errores</div>
+                    <div class="metric-value errors" id="total-errors" ></div>
+                    <div class="metric-label" >Total Errores</div>
                 </div>
                 
                 <div class="metric-card">
-                    <div class="metric-value warnings">4,846</div>
-                    <div class="metric-label">Total Warnings</div>
+                    <div class="metric-value warnings" id="error-warning"></div>
+                    <div class="metric-label" >Total Warnings</div>
                 </div>
                 
                 <div class="metric-card">
-                    <div class="metric-value infos">109,002</div>
-                    <div class="metric-label">Total Infos</div>
+                    <div class="metric-value infos" id="error-info"></div>
+                    <div class="metric-label" >Total Infos</div>
                 </div>
 
                 <div class="metric-card">
-                    <div class="metric-value speedup">1.36x</div>
-                    <div class="metric-label">Speedup</div>
+                    <div class="metric-value speedup" id="speedup"></div>
+                    <div class="metric-label" >Speedup</div>
                 </div>
             </div>
 
@@ -47,7 +47,7 @@
                 </div>
 
                 <div class="chart-container">
-                    <div class="chart-title">⏱️ Comparación de Tiempos</div>
+                    <div class="chart-title"⏱ Comparación de Tiempos</div>
                     <canvas id="timeChart"></canvas>
                 </div>
             </div>
@@ -56,19 +56,19 @@
                 <div class="performance-grid">
                     <div class="performance-item">
                         <div class="performance-label">Eficiencia</div>
-                        <div class="performance-value">3.49%</div>
+                        <div class="performance-value" id="eficiencia"></div>
                     </div>
                     <div class="time-item">
                         <div class="performance-label">Secuencial</div>
-                        <div class="time-value sequential">334ms</div>
+                        <div class="time-value sequential"id="msSecuencial"></div>
                     </div>
                     <div class="time-item">
                         <div class="performance-label">Paralelo</div>
-                        <div class="time-value parallel">246ms</div>
+                        <div class="time-value parallel" id="msParalelo"></div>
                     </div>
                     <div class="time-item">
                         <div class="performance-label">Mejora</div>
-                        <div class="time-value parallel">🚀 26.3% más rápido</div>
+                        <div class="time-value parallel" ></div>
                     </div>
                 </div>
             </div>
@@ -77,36 +77,6 @@
 
     <!-- Chart.js ( para las gráficas) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Ejemplo de gráfico de rendimiento
-        const ctx1 = document.getElementById('performanceChart').getContext('2d');
-        new Chart(ctx1, {
-            type: 'bar',
-            data: {
-                labels: ['Speedup', 'Eficiencia'],
-                datasets: [{
-                    label: 'Métricas',
-                    data: [1.36, 3.49],
-                    backgroundColor: ['#22c55e', '#f59e0b']
-                }]
-            },
-            options: { responsive: true }
-        });
-
-        // Ejemplo de gráfico de tiempos
-        const ctx2 = document.getElementById('timeChart').getContext('2d');
-        new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels: ['Secuencial', 'Paralelo'],
-                datasets: [{
-                    label: 'Tiempo (ms)',
-                    data: [334, 246],
-                    backgroundColor: ['#ef4444', '#22c55e']
-                }]
-            },
-            options: { responsive: true }
-        });
-    </script>
+    <script src="js/dashboard.js"></script>
 </body>
 </html>

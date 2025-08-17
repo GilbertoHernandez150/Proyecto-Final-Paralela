@@ -395,7 +395,7 @@ input:-webkit-autofill {
 .helper-grid{
   margin-top: 16px;
   display:grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 14px;
 }
 @media (max-width: 900px){ .helper-grid{ grid-template-columns: 1fr 1fr; } }

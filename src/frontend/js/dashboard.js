@@ -1,15 +1,42 @@
+
+const sshinfo = document.getElementById("ssh-info");
+const sshData = JSON.parse(localStorage.getItem("ssh-sentinel:last-conn"));
+//le colocamos la info de la conexion que se realizo
+sshinfo.innerText =  `Host: ${sshData.host} Puerto: ${sshData.port} Usuario: ${sshData.user}`
 //funcion para retornar el analisis parseado
 function getAnalysisData(){
-    return JSON.parse(sessionStorage.getItem("analisis"));
+    try{
+
+        return JSON.parse(sessionStorage.getItem("analisis"));
+    }
+    catch{
+        return null; //retornamos null ya que no hay ningun valor, podriamos retornar un objeto vacio pero luego serian mas validaciones
+    }
 }
 
 //validaremos si tenemos la data del analisis
 function validateAnalysisData(){
-    const data =  getAnalysisData();
-    if(){}; //falta hacer las validaciones
+  const data =  getAnalysisData();
+    if(!data){
+        alert("No pudimos obtener el analisis, te estaremos redireccionando al index nuevamente")
+        window.location.href = "/src/frontend/index.html";
+    };
 
-    //poner un loader y luego quitarlo si la data es valida
-    //redireccionar si es neesario
+    //simulacion de que estamos cargando la informacion
+    setTimeout(()=>{
+        console.log("Te estaremos redireccionado en 5 segundos")
+        
+        //seteamos ahora el dashboard ya que si recibimos info
+        const dashboard =  document.getElementById("dashboard")
+        dashboard.style.display = "block";
+
+        // ocultamos el loading DESPUÉS de mostrar el dashboard
+        const loading =  document.getElementById("loadingOverlay");
+        loading.style.display = "none";
+
+    }, 3000)
+   
+   
 }
 function renderCharts(){
      const data =  getAnalysisData();
@@ -41,7 +68,6 @@ function renderCharts(){
             borderWidth: 1
         }]
     },
-    width:150,
     options: {
         responsive: true,
         plugins: {
@@ -74,10 +100,10 @@ function setValueHtmlFields(){
     msSeq.innerHTML = `${data.tiempoSecuencialMs} MS`;
     msPar.innerHTML =  `${data.tiempoParaleloMs} MS`;
 }
-
+//inicializa la informacion que estara dentro del dashboard
 function initializeDashboard(){
-    renderCharts();
-    setValueHtmlFields();
+    renderCharts();//renderizara los graficos
+    setValueHtmlFields(); //va a setear los valores tipo speedup, eficiencia y etc
 }
-
+validateAnalysisData();
 initializeDashboard();

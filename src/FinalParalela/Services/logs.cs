@@ -2,28 +2,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using FinalParalela.Models; // Importamos las clases que movimos a Models
 
 namespace FinalParalela.Services
 {
     // Servicio para procesar, clasificar y analizar logs aplicando paralelismo
     public class LogsService
     {
-        // Representa una entrada individual del log con fecha, tipo y mensaje
-        public class LogEntry
-        {
-            public DateTime Fecha { get; set; }   // Fecha y hora del log
-            public string Tipo { get; set; }      // Tipo de log (ERROR, WARNING, INFO)
-            public string Mensaje { get; set; }   // Mensaje descriptivo del log
-        }
-
-        // Contenedor para agrupar las entradas de log por su tipo
-        public class LogsResult
-        {
-            public List<LogEntry> Errors { get; set; }    // Lista de logs de tipo error
-            public List<LogEntry> Warnings { get; set; }  // Lista de logs de tipo advertencia
-            public List<LogEntry> Infos { get; set; }     // Lista de logs de tipo información
-        }
-
         // Metodo estatico que lee un archivo CSV de logs y los clasifica
         public static ParallelAnalysisResult ProcesarLogsSecuencialVsParalelo(string path)
         { 
@@ -76,7 +61,6 @@ namespace FinalParalela.Services
             int infosSec = secInfos.Count;
 
             //detenemos el tiempo para calcular la ejecucion secuencial
-
             swSec.Stop();
 
             // iniciamos la ejecucion paralela
@@ -87,7 +71,6 @@ namespace FinalParalela.Services
             var parInfos = new List<LogEntry>();
 
             //creamos los objetos de bloque para que se procese luego de manera paralela
-
             object lockErrors = new object();
             object lockWarnings = new object();
             object lockInfos = new object();
@@ -164,20 +147,5 @@ namespace FinalParalela.Services
                 TiempoParaleloMs = swPar.ElapsedMilliseconds
             };
         }
-
     }
-    // Clase para almacenar el resultado del analisis paralelo
-    public class ParallelAnalysisResult
-        {
-            public int TotalErrors { get; set; }
-            public int TotalWarnings { get; set; }
-            public int TotalInfos { get; set; }
-            public double Speedup { get; set; }
-            public double Eficiencia { get; set; }
-            public long TiempoSecuencialMs { get; set; }
-            public long TiempoParaleloMs { get; set; }
-        };
-
-        
-    
 }

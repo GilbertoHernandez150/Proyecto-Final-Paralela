@@ -15,67 +15,24 @@ public class SshController : ControllerBase
     [HttpPost("run")]
     public IActionResult Run([FromBody] SSHConnectionDto dto)
     {
-        // Comando remoto que genera un CSV de eventos del sistema en el perfil del usuario
-        var cmdText =
-            "powershell -NoProfile -Command " +
-            "\"$csv = Join-Path $env:USERPROFILE 'system_log.csv'; " +
-            "Get-WinEvent -LogName System | " +
-            "Select-Object TimeCreated, LevelDisplayName, ProviderName, Id, Message | " +
-            "Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8\"";
-
+     
         // Ruta local donde guardaremos el archivo descargado
         string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
         string localDir = Path.Combine(projectRoot, "data");
         Directory.CreateDirectory(localDir);
         string localPath = Path.Combine(localDir, "system_log.csv");
 
-        // Información de conexión SSH
-        var info = new PasswordConnectionInfo(dto.Host, dto.Port, dto.User, dto.Password)
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
 
-        // Conexión SSH para ejecutar el comando
-        
-        //using var client = new SshClient(info);
-        //client.KeepAliveInterval = TimeSpan.FromSeconds(15);
-        //client.Connect();
-        //client.RunCommand(cmdText);
 
         try
         {
-            using var client = new SshClient(info);
-            client.KeepAliveInterval = TimeSpan.FromSeconds(15);
-            client.Connect();
+            // realizamos la conexion ssh generando el archivo y posteriomente lo descargamos para hacer el analisis
+            GenerateAndDownloadCsv(dto, localPath);
 
-            if (!client.IsConnected)
-                throw new Exception("No se pudo establecer la conexión al servidor.");
+            // retornamos el analisis genereado por los logs
+            var analisis = AnalyzeLogs(localPath);
 
-            var result = client.RunCommand(cmdText);
-            // Obtener ruta remota del archivo generado
-            var remoteUserProfile = client.RunCommand("powershell -NoProfile -Command \"$env:USERPROFILE\"")
-                                          .Result.Trim();
-            client.Disconnect();
-
-            // Ajustar formato de ruta para SFTP
-            var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
-            if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
-                remotePath = "/" + remotePath;
-
-            //Descarga del archivo vía SFTP
-            using (var sftp = new SftpClient(info))
-            {
-                sftp.Connect();
-                using var fs = System.IO.File.Create(localPath);
-                sftp.DownloadFile(remotePath, fs);
-                sftp.Disconnect();
-            }
-
-            // sanitizamos los logs para pasarlo a el analisis paralelo
-            var analisis = LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
-
-
-            // retornamos los resultados
+            // 🔹 Respuesta estándar que verifican los tests
             return Ok(new
             {
                 Mensaje = "Análisis paralelo completado con éxito.",
@@ -95,11 +52,69 @@ public class SshController : ControllerBase
         catch (Exception ex)
         {
             // manejamos cualquier otra excepcion inesperada
-            return  BadRequest($"Error inesperado: {ex.Message}");
+            return BadRequest($"Error inesperado: {ex.Message}");
         }
 
-        
 
-       
+
+
+    }
+
+
+    //declaramos los metodos protected virtual para que al heredar la clase se puedan sobreescribir en los tests que se realizaran
+    protected virtual void GenerateAndDownloadCsv(SSHConnectionDto dto, string localPath)
+    {
+        // comando que utilizamos para generar el csv de los logs del sistema
+        var cmdText =
+            "powershell -NoProfile -Command " +
+            "\"$csv = Join-Path $env:USERPROFILE 'system_log.csv'; " +
+            "Get-WinEvent -LogName System | " +
+            "Select-Object TimeCreated, LevelDisplayName, ProviderName, Id, Message | " +
+            "Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8\"";
+
+        //creamos el objeto de conexion con las credenciales recibidas dentro del dto
+        var info = new PasswordConnectionInfo(dto.Host, dto.Port, dto.User, dto.Password)
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
+        //inicializamos el cliente SSH con la informacion de conexion
+        using var client = new SshClient(info);
+        client.KeepAliveInterval = TimeSpan.FromSeconds(15);
+        client.Connect();
+        //nos conecntamos al servidor por ssh, retornamos un error si no pudimos conectarnos
+
+        if (!client.IsConnected)
+            throw new Exception("No se pudo establecer la conexión al servidor.");
+
+        //ejecutamos el comando para que se genere el csv
+        client.RunCommand(cmdText);
+
+        //obtenemos la ruta del usuario donde se genero el csv de los logs
+        var remoteUserProfile = client.RunCommand("powershell -NoProfile -Command \"$env:USERPROFILE\"")
+                                      .Result.Trim();
+        //nos desconectamos al ya obtener la ruta
+        client.Disconnect();
+
+        // terminamos de construir la ruta del archivo
+        var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
+        if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
+            remotePath = "/" + remotePath;
+
+        // hacemos la descarga por sftp, con la misma info de conexion que hicimos con ssh
+        using var sftp = new SftpClient(info);
+        sftp.Connect();
+        //creamos el archivo donde se ira guardando la descarga
+        using var fs = System.IO.File.Create(localPath);
+        //descargamos el archivo remoto a nuestro sistema local
+        sftp.DownloadFile(remotePath, fs);
+        sftp.Disconnect();
+    }
+
+    // metodo que va a retornar el resultado del analisis de los logs
+    protected virtual object AnalyzeLogs(string localPath)
+    { 
+        //retornamos el resultado del analisis de los logs
+        return LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
     }
 }

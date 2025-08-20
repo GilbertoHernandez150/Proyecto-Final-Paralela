@@ -19,11 +19,12 @@ document.getElementById('analysisForm').addEventListener('submit', async functio
         user: document.getElementById('user').value,
         password: document.getElementById('password').value
     };
-
+    
     //Hacemos la solicitud con los datos para realizar el analisis
     try {
+        const ASP_BACKEND_PORT = 7082;
         //hacemos un await para no detener cualquier otra accion hasta obtener la info del analisis
-        const response = await fetch('https://localhost:7082/api/ssh/run', {
+        const response = await fetch(`https://localhost:${ASP_BACKEND_PORT}/api/ssh/run`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -51,7 +52,8 @@ document.getElementById('analysisForm').addEventListener('submit', async functio
         setTimeout(()=>{
             // console.log("Te redireccionaremos al dashboard!!!");
             //hacemos la redireccion
-            window.location.href = "/src/frontend/dashboard.html";
+            const WEB_SERVER_URL = "/src/frontend/";
+            window.location.href =  `${WEB_SERVER_URL}dashboard.html`;
             alert("Haremos la redireccion")
         },1)
 

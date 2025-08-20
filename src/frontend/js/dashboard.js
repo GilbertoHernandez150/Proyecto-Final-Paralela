@@ -18,8 +18,9 @@ function getAnalysisData(){
 function validateAnalysisData(){
   const data =  getAnalysisData();
     if(!data){
+        const WEB_SERVER_URL = "/src/frontend/";
         alert("No pudimos obtener el analisis, te estaremos redireccionando al index nuevamente")
-        window.location.href = "/src/frontend/index.html";
+        window.location.href = `${WEB_SERVER_URL}index.html`;
     };
 
     //simulacion de que estamos cargando la informacion

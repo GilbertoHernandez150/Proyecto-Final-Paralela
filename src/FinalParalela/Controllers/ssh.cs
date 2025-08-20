@@ -30,7 +30,7 @@ public class SshController : ControllerBase
             GenerateAndDownloadCsv(dto, localPath);
 
             // retornamos el analisis genereado por los logs
-            var analisis = AnalyzeLogs(localPath);
+            var analisis = AnalyzeLogs(localPath, dto.Cores);
 
             // 🔹 Respuesta estándar que verifican los tests
             return Ok(new
@@ -112,9 +112,9 @@ public class SshController : ControllerBase
     }
 
     // metodo que va a retornar el resultado del analisis de los logs
-    protected virtual object AnalyzeLogs(string localPath)
+    protected virtual object AnalyzeLogs(string localPath, int nWorkers)
     { 
         //retornamos el resultado del analisis de los logs
-        return LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
+        return LogsService.ProcesarLogsSecuencialVsParalelo(localPath, nWorkers);
     }
 }

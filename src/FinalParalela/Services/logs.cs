@@ -10,8 +10,11 @@ namespace FinalParalela.Services
     public class LogsService
     {
         // Metodo estatico que lee un archivo CSV de logs y los clasifica
-        public static ParallelAnalysisResult ProcesarLogsSecuencialVsParalelo(string path)
+        public static ParallelAnalysisResult ProcesarLogsSecuencialVsParalelo(string path,int workers)
         { 
+
+            int nWorkers = workers > 0 ? workers : Environment.ProcessorCount;
+
             //Ver si el archivo existe en la ruta recibida
             if (!File.Exists(path))
                 //retornamos el objeto vacio
@@ -77,9 +80,12 @@ namespace FinalParalela.Services
 
             //leenmos las lineas del archivo
             var lineas = File.ReadAllLines(path).Skip(1).ToArray();
+
+            var opts = new ParallelOptions { MaxDegreeOfParallelism = nWorkers};
             //iteramos de manera paralela sobre cada linea del archivo 
             Parallel.ForEach(
-                Partitioner.Create(0, lineas.Length), //dividimos el trabajo en particiones oara procesarlo en paralelo
+                Partitioner.Create(0, lineas.Length),
+                opts, //dividimos el trabajo en particiones oara procesarlo en paralelo
                 range =>
                 {
                     //creamos listas locales para los tipos de logs
@@ -133,7 +139,7 @@ namespace FinalParalela.Services
 
             // medimos el speedp y eficiencia, usamos el ternario para evitar divisiones entre cero
             double speedup = swPar.ElapsedMilliseconds > 0 ? (double)swSec.ElapsedMilliseconds / swPar.ElapsedMilliseconds: 0;
-            double eficiencia = Environment.ProcessorCount > 0 ? speedup / Environment.ProcessorCount: 0;
+            double eficiencia = workers > 0 ? speedup / workers : 0.0;
 
             //retornamos el objeto del analisis paralelo realizado
             return new ParallelAnalysisResult

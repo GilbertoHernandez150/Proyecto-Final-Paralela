@@ -11,6 +11,6 @@ public class SSHConnectionDto
     public string User { get; set; } = default!;
     //Password para el user de la conexion SSH
     public string Password { get; set; } = default!;
-    //Comando a ejecutar en el servidor, por defecto, haremos un dir 
-    // TO DO: Validar si sera necesario o solo utilizaremos el comando por defecto de obtener los logs del systema
+    //cores utilizados para hacer el analisis, por defecto tomara todos los del sistema
+    public int Cores { get; set; } = Environment.ProcessorCount;
 }

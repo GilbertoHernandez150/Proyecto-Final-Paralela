@@ -1,8 +1,7 @@
-
 const sshinfo = document.getElementById("ssh-info");
 const sshData = JSON.parse(localStorage.getItem("ssh-sentinel:last-conn"));
 //le colocamos la info de la conexion que se realizo
-sshinfo.innerText =  `Host: ${sshData.host} Puerto: ${sshData.port} Usuario: ${sshData.user}`
+sshinfo.innerText =  `Host: ${sshData.host} Puerto: ${sshData.port} Usuario: ${sshData.user} Cores Utilizados:${sshData.cores}`;
 //funcion para retornar el analisis parseado
 function getAnalysisData(){
     try{
@@ -18,8 +17,9 @@ function getAnalysisData(){
 function validateAnalysisData(){
   const data =  getAnalysisData();
     if(!data){
+        const WEB_SERVER_URL = "/src/frontend/";
         alert("No pudimos obtener el analisis, te estaremos redireccionando al index nuevamente")
-        window.location.href = "/src/frontend/index.html";
+        window.location.href = `${WEB_SERVER_URL}index.html`;
     };
 
     //simulacion de que estamos cargando la informacion
@@ -98,7 +98,7 @@ function setValueHtmlFields(){
     speedup.innerHTML = data.speedup;
     eficiencia.innerHTML = data.eficiencia
     msSeq.innerHTML = `${data.tiempoSecuencialMs} MS`;
-    msPar.innerHTML =  `${data.tiempoParaleloMs} MS`;
+    msPar.innerHTML = ` ${data.tiempoParaleloMs} MS`;
 }
 //inicializa la informacion que estara dentro del dashboard
 function initializeDashboard(){

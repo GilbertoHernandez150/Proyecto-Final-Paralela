@@ -40,6 +40,10 @@
                         <input type="number" id="port" name="port" value="22" required>
                     </div>
                     <div class="form-group">
+                        <label for="port">Processors</label>
+                        <input type="number" id="cores" name="cores" value="20" required>
+                    </div>
+                    <div class="form-group">
                         <label for="user">User</label>
                         <input type="text" id="user" name="user" required autocomplete="username" placeholder="Name">
                     </div>
@@ -49,7 +53,7 @@
                             <input type="password" id="password" name="password" placeholder="Password" required
                                 autocomplete="current-password">
                             <button type="button" class="ghost-btn" id="togglePass"
-                                aria-label="Mostrar u ocultar contraseña">👁️</button>
+                                aria-label="Mostrar u ocultar contraseña">👁</button>
                         </div>
                         <small class="hint">Nunca guardamos tu contraseña. Úsala solo en equipos de confianza.</small>
                     </div>
@@ -82,7 +86,7 @@
             <ul>
                 <li><kbd>Tab</kbd> para moverte entre campos.</li>
                 <li><kbd>Enter</kbd> para iniciar análisis.</li>
-                <li>Click en <strong>👁️</strong> para ver/ocultar contraseña.</li>
+                <li>Click en <strong>👁</strong> para ver/ocultar contraseña.</li>
             </ul>
         </article>
     </section>

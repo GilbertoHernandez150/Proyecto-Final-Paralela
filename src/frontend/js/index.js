@@ -1,3 +1,20 @@
+const ASP_BACKEND_PORT = 7082;
+
+document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        //  hacemos la soli
+        const response = await fetch(`https://localhost:${ASP_BACKEND_PORT}/api/cores`);
+        const data = await response.json();
+
+        // seleccionamos el input del core
+        const input = document.getElementById("cores");
+
+        // Ponemos la cantidad de procesadores disponibles
+        input.placeholder = `Tienes disponible ${data.systemCores}`; 
+      } catch (error) {
+        console.error("No se pudo setear los cores:", error);
+      }
+    });
 
 document.getElementById('analysisForm').addEventListener('submit', async function (e) {
     //evitamos que se reinicien los campos del form
@@ -17,12 +34,12 @@ document.getElementById('analysisForm').addEventListener('submit', async functio
         host: document.getElementById('host').value,
         port: document.getElementById('port').value,
         user: document.getElementById('user').value,
-        password: document.getElementById('password').value
+        password: document.getElementById('password').value,
+        cores: document.getElementById('cores').value
     };
     
     //Hacemos la solicitud con los datos para realizar el analisis
     try {
-        const ASP_BACKEND_PORT = 7082;
         //hacemos un await para no detener cualquier otra accion hasta obtener la info del analisis
         const response = await fetch(`https://localhost:${ASP_BACKEND_PORT}/api/ssh/run`, {
             method: 'POST',

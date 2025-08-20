@@ -22,8 +22,6 @@ public class SshController : ControllerBase
         Directory.CreateDirectory(localDir);
         string localPath = Path.Combine(localDir, "system_log.csv");
 
-
-
         try
         {
             // realizamos la conexion ssh generando el archivo y posteriomente lo descargamos para hacer el analisis
@@ -32,7 +30,7 @@ public class SshController : ControllerBase
             // retornamos el analisis genereado por los logs
             var analisis = AnalyzeLogs(localPath, dto.Cores);
 
-            // 🔹 Respuesta estándar que verifican los tests
+            // respuesta del analisis
             return Ok(new
             {
                 Mensaje = "Análisis paralelo completado con éxito.",
@@ -78,6 +76,8 @@ public class SshController : ControllerBase
             Timeout = TimeSpan.FromSeconds(30)
         };
 
+        
+
         //inicializamos el cliente SSH con la informacion de conexion
         using var client = new SshClient(info);
         client.KeepAliveInterval = TimeSpan.FromSeconds(15);
@@ -88,18 +88,21 @@ public class SshController : ControllerBase
             throw new Exception("No se pudo establecer la conexión al servidor.");
 
         //ejecutamos el comando para que se genere el csv
-        client.RunCommand(cmdText);
+        client.RunCommand(cmdText); 
 
+        
         //obtenemos la ruta del usuario donde se genero el csv de los logs
         var remoteUserProfile = client.RunCommand("powershell -NoProfile -Command \"$env:USERPROFILE\"")
                                       .Result.Trim();
         //nos desconectamos al ya obtener la ruta
         client.Disconnect();
 
+
         // terminamos de construir la ruta del archivo
         var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
         if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
             remotePath = "/" + remotePath;
+
 
         // hacemos la descarga por sftp, con la misma info de conexion que hicimos con ssh
         using var sftp = new SftpClient(info);

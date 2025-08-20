@@ -2,7 +2,7 @@
 const sshinfo = document.getElementById("ssh-info");
 const sshData = JSON.parse(localStorage.getItem("ssh-sentinel:last-conn"));
 //le colocamos la info de la conexion que se realizo
-sshinfo.innerText =  `Host: ${sshData.host} Puerto: ${sshData.port} Usuario: ${sshData.user}`
+sshinfo.innerText =  `Host: ${sshData.host} Puerto: ${sshData.port} Usuario: ${sshData.user} Cores Utilizados:${sshData.cores}`
 //funcion para retornar el analisis parseado
 function getAnalysisData(){
     try{

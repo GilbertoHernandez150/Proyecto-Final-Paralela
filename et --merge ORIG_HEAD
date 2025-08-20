@@ -1,0 +1,31 @@
+[33m53866a3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/test[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: pull --tags: Fast-forward
+[33m982cb99[m HEAD@{1}: commit: Co-authored-by: LuisAngelSanchez Creación del README.md en carpeta metrics
+[33m4a52b82[m HEAD@{2}: commit: Co-authored-by: LuisAngelSanchez Creación de metrics del proyecto
+[33mc987eac[m HEAD@{3}: pull --tags: Fast-forward
+[33mf68db3c[m HEAD@{4}: commit: Co-authored-by: LuisAngelSanchez Creación del README.md
+[33m6203dda[m HEAD@{5}: pull --tags: Fast-forward
+[33m3fc2958[m HEAD@{6}: commit: Co-authored-by: LuisAngelSanchez Logica desarrollada en el archivo de dashboard,js, conexion con el backend e interpolacion de informacion recibida por el API
+[33m83f2c0f[m HEAD@{7}: reset: moving to HEAD~1
+[33m1066b00[m HEAD@{8}: commit: Co-authored-by: LuisAngelSanchez Logica desarrollada en el archivo de dashboard,js, conexion con el backend e interpolacion de informacion recibida por el API
+[33m83f2c0f[m HEAD@{9}: pull --tags: Fast-forward
+[33ma252f04[m HEAD@{10}: commit: Co-authored-by: LuisAngelSanchez Creación del Dashboard
+[33mbe19c6e[m HEAD@{11}: pull --tags: Fast-forward
+[33mb9d71da[m HEAD@{12}: pull --tags: Fast-forward
+[33m223c912[m HEAD@{13}: reset: moving to HEAD~1
+[33m83e9768[m HEAD@{14}: pull --tags: Fast-forward
+[33m223c912[m HEAD@{15}: reset: moving to HEAD~1
+[33m83e9768[m HEAD@{16}: pull --tags: Merge made by the 'ort' strategy.
+[33m223c912[m HEAD@{17}: commit (amend): Documentando Logs Co-authored-by: LuisAngelSanchez
+[33macc7686[m HEAD@{18}: commit: Documentando Logs
+[33m76ba45d[m HEAD@{19}: checkout: moving from logs to main
+[33m76ba45d[m HEAD@{20}: commit: Segmentación de Logs
+[33m4926182[m HEAD@{21}: checkout: moving from main to logs
+[33m4926182[m HEAD@{22}: checkout: moving from Logs to main
+[33m4926182[m HEAD@{23}: checkout: moving from main to Logs
+[33m4926182[m HEAD@{24}: checkout: moving from develop to main
+[33m4926182[m HEAD@{25}: checkout: moving from main to develop
+[33m4926182[m HEAD@{26}: pull --tags: Fast-forward
+[33mcc9fb69[m HEAD@{27}: checkout: moving from develop to main
+[33mcc9fb69[m HEAD@{28}: checkout: moving from main to develop
+[33mcc9fb69[m HEAD@{29}: pull --tags origin main: Fast-forward
+[33md6c474d[m HEAD@{30}: clone: from https://github.com/GilbertoHernandez150/Proyecto-Final-Paralela.git

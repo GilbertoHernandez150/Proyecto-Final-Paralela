@@ -22,17 +22,56 @@ public class SshController : ControllerBase
         Directory.CreateDirectory(localDir);
         string localPath = Path.Combine(localDir, "system_log.csv");
 
+        // Información de conexión SSH
+        var info = new PasswordConnectionInfo(dto.Host, dto.Port, dto.User, dto.Password)
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
 
+        // Conexión SSH para ejecutar el comando
+
+        // Agrega esto antes de usar cmdText:
+        var cmdText =
+            "powershell -NoProfile -Command " +
+            "\"$csv = Join-Path $env:USERPROFILE 'system_log.csv'; " +
+            "Get-WinEvent -LogName System | " +
+            "Select-Object TimeCreated, LevelDisplayName, ProviderName, Id, Message | " +
+            "Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8\"";
 
         try
         {
-            // realizamos la conexion ssh generando el archivo y posteriomente lo descargamos para hacer el analisis
-            GenerateAndDownloadCsv(dto, localPath);
+            using var client = new SshClient(info);
+            client.KeepAliveInterval = TimeSpan.FromSeconds(15);
+            client.Connect();
 
-            // retornamos el analisis genereado por los logs
-            var analisis = AnalyzeLogs(localPath);
+            if (!client.IsConnected)
+                throw new Exception("No se pudo establecer la conexión al servidor.");
 
-            // 🔹 Respuesta estándar que verifican los tests
+            var result = client.RunCommand(cmdText);
+            // Obtener ruta remota del archivo generado
+            var remoteUserProfile = client.RunCommand("powershell -NoProfile -Command \"$env:USERPROFILE\"")
+                                          .Result.Trim();
+            client.Disconnect();
+
+            // Ajustar formato de ruta para SFTP
+            var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
+            if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
+                remotePath = "/" + remotePath;
+
+            //Descarga del archivo vía SFTP
+            using (var sftp = new SftpClient(info))
+            {
+                sftp.Connect();
+                using var fs = System.IO.File.Create(localPath);
+                sftp.DownloadFile(remotePath, fs);
+                sftp.Disconnect();
+            }
+
+            // sanitizamos los logs para pasarlo a el analisis paralelo
+            var analisis = LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
+
+
+            // retornamos los resultados
             return Ok(new
             {
                 Mensaje = "Análisis paralelo completado con éxito.",

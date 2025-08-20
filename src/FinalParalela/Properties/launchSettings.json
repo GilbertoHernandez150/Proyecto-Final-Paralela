@@ -9,7 +9,7 @@
     }
   },
   "profiles": {
-  "FinalParalela": {
+  "https": {
     "commandName": "Project",
     "dotnetRunMessages": true,
     "launchBrowser": true,

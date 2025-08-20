@@ -22,56 +22,17 @@ public class SshController : ControllerBase
         Directory.CreateDirectory(localDir);
         string localPath = Path.Combine(localDir, "system_log.csv");
 
-        // Información de conexión SSH
-        var info = new PasswordConnectionInfo(dto.Host, dto.Port, dto.User, dto.Password)
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
 
-        // Conexión SSH para ejecutar el comando
-
-        // Agrega esto antes de usar cmdText:
-        var cmdText =
-            "powershell -NoProfile -Command " +
-            "\"$csv = Join-Path $env:USERPROFILE 'system_log.csv'; " +
-            "Get-WinEvent -LogName System | " +
-            "Select-Object TimeCreated, LevelDisplayName, ProviderName, Id, Message | " +
-            "Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8\"";
 
         try
         {
-            using var client = new SshClient(info);
-            client.KeepAliveInterval = TimeSpan.FromSeconds(15);
-            client.Connect();
+            // realizamos la conexion ssh generando el archivo y posteriomente lo descargamos para hacer el analisis
+            GenerateAndDownloadCsv(dto, localPath);
 
-            if (!client.IsConnected)
-                throw new Exception("No se pudo establecer la conexión al servidor.");
+            // retornamos el analisis genereado por los logs
+            var analisis = AnalyzeLogs(localPath, dto.Cores);
 
-            var result = client.RunCommand(cmdText);
-            // Obtener ruta remota del archivo generado
-            var remoteUserProfile = client.RunCommand("powershell -NoProfile -Command \"$env:USERPROFILE\"")
-                                          .Result.Trim();
-            client.Disconnect();
-
-            // Ajustar formato de ruta para SFTP
-            var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
-            if (remotePath.StartsWith("C:", StringComparison.OrdinalIgnoreCase))
-                remotePath = "/" + remotePath;
-
-            //Descarga del archivo vía SFTP
-            using (var sftp = new SftpClient(info))
-            {
-                sftp.Connect();
-                using var fs = System.IO.File.Create(localPath);
-                sftp.DownloadFile(remotePath, fs);
-                sftp.Disconnect();
-            }
-
-            // sanitizamos los logs para pasarlo a el analisis paralelo
-            var analisis = LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
-
-
-            // retornamos los resultados
+            // devolvemos el analisis generado
             return Ok(new
             {
                 Mensaje = "Análisis paralelo completado con éxito.",
@@ -117,11 +78,13 @@ public class SshController : ControllerBase
             Timeout = TimeSpan.FromSeconds(30)
         };
 
+        Console.WriteLine("Conexion ssh");
         //inicializamos el cliente SSH con la informacion de conexion
         using var client = new SshClient(info);
         client.KeepAliveInterval = TimeSpan.FromSeconds(15);
         client.Connect();
         //nos conecntamos al servidor por ssh, retornamos un error si no pudimos conectarnos
+        Console.WriteLine("se conecto");
 
         if (!client.IsConnected)
             throw new Exception("No se pudo establecer la conexión al servidor.");
@@ -134,6 +97,7 @@ public class SshController : ControllerBase
                                       .Result.Trim();
         //nos desconectamos al ya obtener la ruta
         client.Disconnect();
+        Console.WriteLine("empezar ruta transger ssh");
 
         // terminamos de construir la ruta del archivo
         var remotePath = $"{remoteUserProfile.Replace('\\', '/')}/system_log.csv";
@@ -148,12 +112,17 @@ public class SshController : ControllerBase
         //descargamos el archivo remoto a nuestro sistema local
         sftp.DownloadFile(remotePath, fs);
         sftp.Disconnect();
+                Console.WriteLine("terminamos ssh");
+
     }
 
     // metodo que va a retornar el resultado del analisis de los logs
-    protected virtual object AnalyzeLogs(string localPath)
-    { 
+    protected virtual object AnalyzeLogs(string localPath, int nWorkers)
+    {
+        Console.WriteLine($"Estos son los n workers{nWorkers}");
         //retornamos el resultado del analisis de los logs
-        return LogsService.ProcesarLogsSecuencialVsParalelo(localPath);
-    }
+        var logs  = LogsService.ProcesarLogsSecuencialVsParalelo(localPath, nWorkers);
+        Console.WriteLine(logs);
+        return logs;
+    }
 }
